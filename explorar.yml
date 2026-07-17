@@ -1,0 +1,35 @@
+name: Explorar API de LUMA
+
+# Solo a mano. No tiene cron: esto se corre una vez para investigar,
+# no es parte del monitor.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  explorar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Llamar los endpoints y describir la estructura
+        run: python explorar.py
+
+      - name: Guardar las respuestas crudas
+        run: |
+          git config user.name "monitor-bot"
+          git config user.email "monitor-bot@users.noreply.github.com"
+          git add exploracion/ 2>/dev/null || true
+          git diff --staged --quiet && echo "Sin cambios" && exit 0
+          git commit -m "Exploracion del API [skip ci]"
+          for i in 1 2 3; do
+            git push && exit 0
+            git pull --rebase origin main
+            sleep 3
+          done
