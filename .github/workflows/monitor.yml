@@ -2,21 +2,25 @@ name: Monitor de apagones
 
 on:
   schedule:
-    # Cada 10 minutos. GitHub a veces se atrasa unos minutos en horas pico.
-    - cron: "*/10 * * * *"
-  workflow_dispatch: # boton para correrlo a mano y probar
+    # Un solo arranque por hora. GitHub cumple mucho mejor con esto
+    # que con */10, y el script se queda vivo 55 min revisando cada 2.
+    - cron: "3 * * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write # para hacer commit del estado
-  issues: write # para abrir el Issue de alerta
+  contents: write
+  issues: write
 
 concurrency:
   group: monitor-apagones
-  cancel-in-progress: false
+  cancel-in-progress: true # el arranque nuevo mata al viejo si quedo colgado
 
 jobs:
   revisar:
     runs-on: ubuntu-latest
+    timeout-minutes: 58 # red de seguridad: nunca pasa de la hora
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,26 +28,5 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Consultar LUMA y comparar
-        id: monitor
+      - name: Monitorear LUMA en continuo
         run: python monitor.py
-
-      - name: Abrir Issue si hay apagon nuevo
-        if: steps.monitor.outputs.hay_alerta == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TITULO: ${{ steps.monitor.outputs.titulo }}
-          CUERPO: ${{ steps.monitor.outputs.cuerpo }}
-        run: |
-          gh issue create \
-            --title "$TITULO" \
-            --body "$CUERPO" \
-            --repo "$GITHUB_REPOSITORY"
-
-      - name: Guardar el estado
-        run: |
-          git config user.name "monitor-bot"
-          git config user.email "monitor-bot@users.noreply.github.com"
-          git add estado.json historico.csv 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Actualizar estado [skip ci]"
-          git push
