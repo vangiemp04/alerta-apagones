@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Red electrica PR — monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papel:      #EDF0F5;
+  --hoja:       #FFFFFF;
+  --tinta:      #0E131D;
+  --tinta-2:    #5C6880;
+  --tinta-3:    #9AA5B8;
+  --linea:      #D5DBE5;
+  --sombra:     #1B2233;
+  --frio:       #64728C;
+  --alerta:     #C42B1C;
+  --bien:       #1F7A4C;
+  --ambar:      #B0740A;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+
+html,body{
+  height:100%;
+  background:var(--papel);
+  color:var(--tinta);
+  font-family:'IBM Plex Sans Condensed',system-ui,sans-serif;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+body{display:flex;flex-direction:column;padding:2.2vh 2.4vw;gap:2vh}
+
+.barra{
+  display:flex;align-items:baseline;justify-content:space-between;
+  border-bottom:1.5px solid var(--tinta);
+  padding-bottom:1.2vh;flex-shrink:0;
+}
+.marca{
+  font-size:clamp(.6rem, 1.5vmin, 1.7vh);
+  font-weight:700;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--tinta);
+}
+.reloj{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(.6rem, 1.5vmin, 1.7vh);
+  color:var(--tinta-2);letter-spacing:.06em;
+}
+
+.titular{display:flex;align-items:flex-end;gap:2.2vw;flex-shrink:0}
+.cifra{
+  flex-shrink:0;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(3rem, 13vmin, 15vh);
+  font-weight:600;line-height:.82;letter-spacing:-.03em;
+  color:var(--tinta);
+  font-variant-numeric:tabular-nums;
+  transition:color .8s ease;
+}
+.cifra.evento{color:var(--alerta)}
+.titular-txt{padding-bottom:1.4vh;min-width:0}
+.titular-txt .l1{
+  font-size:clamp(1rem, 2.2vmin, 2.4vh);
+  font-weight:700;text-transform:uppercase;letter-spacing:.14em;
+}
+.titular-txt .l2{
+  font-size:clamp(.62rem, 1.5vmin, 1.7vh);
+  color:var(--tinta-2);margin-top:.5vh;letter-spacing:.04em;
+}
+.delta{margin-left:auto;flex-shrink:0;text-align:right;padding-bottom:1.4vh}
+.delta .n{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(1.2rem, 4.4vmin, 5vh);
+  font-weight:600;font-variant-numeric:tabular-nums;line-height:1;
+}
+.delta .n.sube{color:var(--alerta)}
+.delta .n.baja{color:var(--bien)}
+.delta .n.igual{color:var(--tinta-3)}
+.delta .t{
+  font-size:clamp(.55rem, 1.3vmin, 1.4vh);
+  color:var(--tinta-2);text-transform:uppercase;
+  letter-spacing:.14em;margin-top:.4vh;
+}
+
+.rejilla{
+  flex:1;display:grid;
+  grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(2,1fr);
+  gap:1.1vw;min-height:0;
+}
+
+.region{
+  border-radius:3px;
+  background:var(--hoja);
+  border:1px solid var(--linea);
+  padding:1.8vh 1.4vw;
+  display:flex;flex-direction:column;justify-content:space-between;
+  transition:border-color .8s ease;
+}
+
+
+.region.critica{border-color:var(--alerta);border-width:2px}
+.region.critica .r-cifra{color:var(--alerta)}
+
+.r-nombre{
+  font-size:clamp(.95rem, 1.9vmin, 2vh);
+  font-weight:700;text-transform:uppercase;letter-spacing:.16em;
+}
+.r-cifra{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(1.5rem, 5.6vmin, 6.4vh);
+  font-weight:600;line-height:.9;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+.r-pie{
+  font-size:clamp(.5rem, 1.25vmin, 1.35vh);
+  color:var(--tinta-2);letter-spacing:.05em;
+  display:flex;justify-content:space-between;align-items:baseline;gap:.6vw;
+}
+.r-pie .planif{font-family:'IBM Plex Mono',monospace;color:var(--frio)}
+.r-delta{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:clamp(.55rem, 1.4vmin, 1.5vh);
+  font-variant-numeric:tabular-nums;
+}
+.r-delta.sube{color:var(--alerta)}
+.r-delta.baja{color:var(--bien)}
+
+/* Planificados: no es evento */
+.region.planificados{
+  background:transparent;
+  border-style:dashed;
+  border-color:var(--tinta-3);
+}
+.region.planificados .r-nombre,
+.region.planificados .r-cifra{color:var(--frio)}
+
+.pie{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:clamp(.55rem, 1.3vmin, 1.4vh);
+  color:var(--tinta-2);
+  border-top:1px solid var(--linea);
+  padding-top:1.2vh;flex-shrink:0;letter-spacing:.04em;
+}
+.estado{display:flex;align-items:center;gap:.6vw}
+.punto{
+  width:.9vh;height:.9vh;min-width:7px;min-height:7px;
+  border-radius:50%;background:var(--bien);flex-shrink:0;
+}
+.punto.viejo{background:var(--ambar)}
+.punto.muerto{background:var(--alerta)}
+@media (prefers-reduced-motion: no-preference){
+  .punto{animation:latir 2.4s ease-in-out infinite}
+}
+@keyframes latir{50%{opacity:.3}}
+
+.aviso{
+  background:var(--alerta);color:#fff;
+  padding:.5vh 1vw;border-radius:2px;
+  font-weight:700;text-transform:uppercase;
+  letter-spacing:.12em;white-space:nowrap;
+  font-size:clamp(.5rem, 1.2vmin, 1.3vh);
+}
+.oculto{display:none}
+</style>
+</head>
+<body>
+
+<div class="barra">
+  <div class="marca">Red electrica &middot; Puerto Rico</div>
+  <div class="reloj" id="reloj">--:--:--</div>
+</div>
+
+<div class="titular">
+  <div class="cifra" id="isla">····</div>
+  <div class="titular-txt">
+    <div class="l1">Clientes sin luz</div>
+    <div class="l2">Averias reales &middot; excluye mantenimiento programado</div>
+  </div>
+  <div class="delta">
+    <div class="n igual" id="delta">—</div>
+    <div class="t">Cambio</div>
+  </div>
+</div>
+
+<div class="rejilla" id="rejilla"></div>
+
+<div class="pie">
+  <div class="estado">
+    <span class="punto" id="punto"></span>
+    <span id="fuente">Conectando…</span>
+  </div>
+  <div id="aviso" class="aviso oculto"></div>
+  <div id="dato">Data de LUMA: —</div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURACION — cambia estas dos lineas
+   ============================================================ */
+const USUARIO = "vangiemp04";
+const REPO    = "alerta-apagones";
+/* ============================================================ */
+
+const ORDEN = ["SAN JUAN","BAYAMON","CAROLINA","CAGUAS","ARECIBO","PONCE","MAYAGUEZ"];
+const API_LUMA = "https://api.miluma.lumapr.com/miluma-outage-api/outage/regionsWithoutService";
+const RAW = `https://raw.githubusercontent.com/${USUARIO}/${REPO}/main/estado.json`;
+
+const CRITICO = 500;
+const REFRESCO_MS = 120000; // 2 minutos
+
+let previo = null;
+
+const norm = s => s.normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toUpperCase().trim();
+const fmt  = n => n.toLocaleString("en-US");
+
+async function traer(){
+  // 1. Intentar LUMA directo (data al minuto, si CORS lo permite)
+  try{
+    const r = await fetch(API_LUMA, {cache:"no-store"});
+    if(r.ok){
+      const d = await r.json();
+      if(d.regions) return {data: leerLuma(d), ts: d.timestamp, via:"LUMA en vivo"};
+    }
+  }catch(e){ /* CORS bloqueado — usamos el repo */ }
+
+  // 2. Leer el estado que escribe el bot
+  const r = await fetch(RAW + "?t=" + Date.now(), {cache:"no-store"});
+  if(!r.ok) throw new Error("No se pudo leer estado.json (HTTP " + r.status + ")");
+  const d = await r.json();
+  return {data: d.regiones, ts: d.timestamp, via:"Via monitor de GitHub"};
+}
+
+function leerLuma(d){
+  const o = {};
+  for(const r of d.regions){
+    const sin = r.totalClientsWithoutService||0;
+    const pl  = r.totalClientsAffectedByPlannedOutage||0;
+    o[norm(r.name)] = {averia: Math.max(0,sin-pl), planificados: pl, total: sin};
+  }
+  return o;
+}
+
+function pintar(regiones){
+  const rejilla = document.getElementById("rejilla");
+  let islaAveria = 0, islaPlan = 0, islaAntes = 0, hayEvento = false;
+  let html = "";
+
+  for(const nombre of ORDEN){
+    const d = regiones[nombre];
+    if(!d) continue;
+    const av = d.averia;
+    islaAveria += av;
+    islaPlan += d.planificados;
+
+    const antes = previo && previo[nombre] ? previo[nombre].averia : null;
+    if(antes !== null) islaAntes += antes;
+    const cambio = antes === null ? null : av - antes;
+
+    const critica = av >= CRITICO;
+    if(critica) hayEvento = true;
+
+    let dl = "";
+    if(cambio !== null && cambio !== 0){
+      dl = `<span class="r-delta ${cambio>0?'sube':'baja'}">${cambio>0?'+':''}${fmt(cambio)}</span>`;
+    }
+
+    html += `
+      <div class="region ${critica?'critica':''}">
+        <div class="r-nombre">${nombre}</div>
+        <div class="r-cifra">${fmt(av)}</div>
+        <div class="r-pie">
+          <span>Planificados <span class="planif">${fmt(d.planificados)}</span></span>
+          ${dl}
+        </div>
+      </div>`;
+  }
+
+  // Octavo tile: los planificados, deliberadamente aparte
+  html += `
+    <div class="region planificados">
+      <div class="r-nombre">Programados</div>
+      <div class="r-cifra">${fmt(islaPlan)}</div>
+      <div class="r-pie"><span>Mantenimiento anunciado &middot; toda la isla</span></div>
+    </div>`;
+
+  rejilla.innerHTML = html;
+
+  const elIsla = document.getElementById("isla");
+  elIsla.textContent = fmt(islaAveria);
+  elIsla.classList.toggle("evento", hayEvento);
+
+  const elDelta = document.getElementById("delta");
+  if(previo === null){
+    elDelta.textContent = "—";
+    elDelta.className = "n igual";
+  }else{
+    const c = islaAveria - islaAntes;
+    elDelta.textContent = (c>0?"+":"") + fmt(c);
+    elDelta.className = "n " + (c>0?"sube":c<0?"baja":"igual");
+  }
+
+  const aviso = document.getElementById("aviso");
+  if(hayEvento){
+    aviso.textContent = "Averia activa";
+    aviso.classList.remove("oculto");
+  }else{
+    aviso.classList.add("oculto");
+  }
+
+  previo = JSON.parse(JSON.stringify(regiones));
+}
+
+function edad(ts){
+  // "07/17/2026 01:10 PM"
+  const m = ts && ts.match(/(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+)\s+(AM|PM)/);
+  if(!m) return null;
+  let h = +m[4] % 12; if(m[6]==="PM") h += 12;
+  return (Date.now() - new Date(+m[3],+m[1]-1,+m[2],h,+m[5]).getTime())/60000;
+}
+
+async function ciclo(){
+  const punto = document.getElementById("punto");
+  try{
+    const {data, ts, via} = await traer();
+    pintar(data);
+    document.getElementById("fuente").textContent = via;
+    const min = edad(ts);
+    document.getElementById("dato").textContent =
+      "Data de LUMA: " + (ts||"—") + (min!==null ? ` · hace ${Math.round(min)} min` : "");
+    // Si la data pasa de 30 min, el silencio no es calma: es una falla
+    punto.className = "punto" + (min!==null && min>30 ? " viejo" : "");
+  }catch(e){
+    punto.className = "punto muerto";
+    document.getElementById("fuente").textContent = "Sin conexion — " + e.message;
+  }
+}
+
+setInterval(()=>{
+  document.getElementById("reloj").textContent =
+    new Date().toLocaleTimeString("es-PR",{hour12:false});
+},1000);
+
+ciclo();
+setInterval(ciclo, REFRESCO_MS);
+</script>
+</body>
+</html>
