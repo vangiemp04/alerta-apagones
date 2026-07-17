@@ -1,19 +1,23 @@
 """
 Monitor de interrupciones LUMA -> alerta via GitHub Issue.
 
-Logica:
-  1. Llama el endpoint de MiLUMA.
-  2. Compara contra el estado guardado en estado.json.
-  3. Si hay sectores NUEVOS dentro de MUNICIPIOS_TARGET, imprime una alerta.
-  4. Guarda el estado nuevo.
+QUE MIDE ESTE SCRIPT
+--------------------
+El endpoint de MiLUMA devuelve 7 REGIONES operativas (no municipios,
+no sectores) con conteos de clientes:
 
-El workflow de GitHub Actions se encarga de: correr esto cada X minutos,
-abrir el Issue si hay alerta, y hacer commit del estado.
+    totalClientsWithoutService          <- todos los que no tienen luz
+    totalClientsAffectedByPlannedOutage <- de esos, cuantos son mantenimiento
 
-IMPORTANTE: el endpoint no es oficial y su estructura puede cambiar.
-La primera corrida guarda la respuesta cruda en muestra_api.json
-para que puedas inspeccionar la forma real del JSON y ajustar
-la funcion extraer_sectores() si hace falta.
+La resta es lo que nos importa:
+
+    AVERIA REAL = sin servicio - planificados
+
+Un apagon planificado lo anunciaron con semanas de anticipacion.
+No es noticia, no mueve a nadie, y si alertas por el te ahogas en ruido.
+Un apagon INESPERADO si es un evento.
+
+Este script solo te avisa por averias reales.
 """
 
 import json
@@ -29,121 +33,37 @@ import urllib.request
 
 API_URL = "https://api.miluma.lumapr.com/miluma-outage-api/outage/regionsWithoutService"
 
-# Los 78 municipios de Puerto Rico.
-#
-# COMO USAR ESTA LISTA:
-#   Para IGNORAR un municipio, ponle un # al principio de su linea.
-#   Ejemplo:  # "ADJUNTAS",     <- este ya no genera alertas
-#
-#   Mientras mas municipios activos, mas alertas. Los 78 activos
-#   equivale a no filtrar nada: vas a recibir decenas de avisos al dia.
-#   Corre asi una semana para medir el ruido real, y luego comenta
-#   los que no te sirvan.
-#
-# MAYUSCULAS sin acentos; el script normaliza.
-MUNICIPIOS_TARGET = [
-    "ADJUNTAS",
-    "AGUADA",
-    "AGUADILLA",
-    "AGUAS BUENAS",
-    "AIBONITO",
-    "ANASCO",
+# Las 7 regiones de LUMA. Comenta con # las que no te interesen.
+# OJO: son regiones operativas, NO municipios. La region "San Juan"
+# cubre mucho mas que el municipio de San Juan.
+REGIONES_TARGET = [
     "ARECIBO",
-    "ARROYO",
-    "BARCELONETA",
-    "BARRANQUITAS",
     "BAYAMON",
-    "CABO ROJO",
-    "CAGUAS",
-    "CAMUY",
-    "CANOVANAS",
     "CAROLINA",
-    "CATANO",
-    "CAYEY",
-    "CEIBA",
-    "CIALES",
-    "CIDRA",
-    "COAMO",
-    "COMERIO",
-    "COROZAL",
-    "CULEBRA",
-    "DORADO",
-    "FAJARDO",
-    "FLORIDA",
-    "GUANICA",
-    "GUAYAMA",
-    "GUAYANILLA",
-    "GUAYNABO",
-    "GURABO",
-    "HATILLO",
-    "HORMIGUEROS",
-    "HUMACAO",
-    "ISABELA",
-    "JAYUYA",
-    "JUANA DIAZ",
-    "JUNCOS",
-    "LAJAS",
-    "LARES",
-    "LAS MARIAS",
-    "LAS PIEDRAS",
-    "LOIZA",
-    "LUQUILLO",
-    "MANATI",
-    "MARICAO",
-    "MAUNABO",
+    "CAGUAS",
     "MAYAGUEZ",
-    "MOCA",
-    "MOROVIS",
-    "NAGUABO",
-    "NARANJITO",
-    "OROCOVIS",
-    "PATILLAS",
-    "PENUELAS",
     "PONCE",
-    "QUEBRADILLAS",
-    "RINCON",
-    "RIO GRANDE",
-    "SABANA GRANDE",
-    "SALINAS",
-    "SAN GERMAN",
     "SAN JUAN",
-    "SAN LORENZO",
-    "SAN SEBASTIAN",
-    "SANTA ISABEL",
-    "TOA ALTA",
-    "TOA BAJA",
-    "TRUJILLO ALTO",
-    "UTUADO",
-    "VEGA ALTA",
-    "VEGA BAJA",
-    "VIEQUES",
-    "VILLALBA",
-    "YABUCOA",
-    "YAUCO",
 ]
 
-# Cuantos sectores nuevos hacen falta para que valga la pena avisarte.
-# Con los 78 municipios activos, 1 te ahoga en alertas. Empezamos en 5.
-# Sube este numero si te siguen llegando demasiadas.
-UMBRAL_SECTORES_NUEVOS = 5
+# Cuantos clientes con AVERIA REAL nuevos, en una sola region,
+# para que te avise. El baseline normal ronda 100-300 por region.
+# 500 = algo se rompio de verdad.
+UMBRAL_CLIENTES_REGION = 500
+
+# O si la isla completa sube de golpe (evento mayor / apagon general).
+UMBRAL_CLIENTES_ISLA = 2000
 
 TIMEOUT = 30
 DIR = pathlib.Path(__file__).parent
 ARCHIVO_ESTADO = DIR / "estado.json"
-ARCHIVO_MUESTRA = DIR / "muestra_api.json"
+ARCHIVO_HISTORICO = DIR / "historico.csv"
 
 # ---------------------------------------------------------------
 
 
 def normalizar(texto):
-    """
-    Quita TODOS los acentos y normaliza espacios, para que
-    'Mayaguez', 'Mayagüez' y 'MAYAGÜEZ' se comparen igual.
-
-    Usa unicodedata en vez de una lista manual de reemplazos:
-    asi cubre tildes, dieresis (u de Mayaguez) y la enie sin
-    que se nos olvide ningun caso.
-    """
+    """MAYUSCULAS sin acentos, para comparar nombres de regiones."""
     texto = unicodedata.normalize("NFKD", str(texto))
     texto = "".join(c for c in texto if not unicodedata.combining(c))
     return " ".join(texto.upper().split())
@@ -161,75 +81,65 @@ def llamar_api():
         return json.loads(respuesta.read().decode("utf-8"))
 
 
-def extraer_sectores(data):
+def extraer(data):
     """
-    Recorre el JSON y saca una lista de (municipio, sector).
-
-    Como no conocemos la forma exacta del JSON de antemano, esta funcion
-    recorre la estructura buscando cualquier diccionario que tenga algo
-    que parezca un municipio y algo que parezca un sector. Es defensiva
-    a proposito. Cuando veas muestra_api.json, puedes reescribirla
-    de forma directa y mucho mas corta.
+    Saca la averia real por region.
+    Devuelve: {"SAN JUAN": {"averia": 157, "planificados": 4402, "total": 4559}, ...}
     """
-    encontrados = set()
+    objetivo = {normalizar(r) for r in REGIONES_TARGET}
+    resultado = {}
 
-    claves_municipio = ("municipality", "municipio", "town", "pueblo", "region")
-    claves_sector = ("sector", "sectorName", "name", "barrio", "nombre")
+    for region in data.get("regions", []):
+        nombre = normalizar(region.get("name", ""))
+        if objetivo and nombre not in objetivo:
+            continue
 
-    def buscar(nodo, municipio_heredado=None):
-        if isinstance(nodo, dict):
-            municipio = municipio_heredado
-            for clave in claves_municipio:
-                if clave in nodo and isinstance(nodo[clave], (str, int)):
-                    municipio = normalizar(nodo[clave])
-                    break
+        sin_servicio = int(region.get("totalClientsWithoutService", 0))
+        planificados = int(region.get("totalClientsAffectedByPlannedOutage", 0))
+        averia = max(0, sin_servicio - planificados)
 
-            for clave in claves_sector:
-                if clave in nodo and isinstance(nodo[clave], str):
-                    encontrados.add((municipio or "SIN MUNICIPIO",
-                                     normalizar(nodo[clave])))
-                    break
+        resultado[nombre] = {
+            "averia": averia,
+            "planificados": planificados,
+            "total": sin_servicio,
+        }
 
-            for valor in nodo.values():
-                buscar(valor, municipio)
-
-        elif isinstance(nodo, list):
-            for item in nodo:
-                buscar(item, municipio_heredado)
-
-    buscar(data)
-    return encontrados
-
-
-def filtrar_target(sectores):
-    if not MUNICIPIOS_TARGET:
-        return sectores
-    objetivo = {normalizar(m) for m in MUNICIPIOS_TARGET}
-    return {(mun, sec) for mun, sec in sectores if mun in objetivo}
+    return resultado
 
 
 def cargar_estado():
     if not ARCHIVO_ESTADO.exists():
-        return set()
+        return {}
     try:
-        crudo = json.loads(ARCHIVO_ESTADO.read_text())
-        return {tuple(par) for par in crudo.get("sectores", [])}
+        return json.loads(ARCHIVO_ESTADO.read_text()).get("regiones", {})
     except (json.JSONDecodeError, AttributeError):
-        return set()
+        return {}
 
 
-def guardar_estado(sectores):
+def guardar_estado(regiones, timestamp):
     ARCHIVO_ESTADO.write_text(
         json.dumps(
-            {"sectores": sorted([list(s) for s in sectores])},
+            {"timestamp": timestamp, "regiones": regiones},
             indent=2,
             ensure_ascii=False,
         )
     )
 
 
+def guardar_historico(regiones, timestamp):
+    """Una linea por corrida. Con esto afinas los umbrales con data real."""
+    nuevo = not ARCHIVO_HISTORICO.exists()
+    with open(ARCHIVO_HISTORICO, "a") as f:
+        if nuevo:
+            f.write("timestamp,region,averia_real,planificados,total\n")
+        for nombre, d in sorted(regiones.items()):
+            f.write(
+                f'"{timestamp}","{nombre}",{d["averia"]},'
+                f'{d["planificados"]},{d["total"]}\n'
+            )
+
+
 def escribir_salida(clave, valor):
-    """Pasa datos al workflow de GitHub Actions."""
     ruta = os.environ.get("GITHUB_OUTPUT")
     if not ruta:
         print(f"[salida local] {clave}={valor}")
@@ -247,36 +157,96 @@ def main():
     except Exception as error:
         print(f"Fallo la llamada al API: {error}")
         escribir_salida("hay_alerta", "false")
-        sys.exit(0)  # no rompemos el workflow por un fallo temporal del API
+        sys.exit(0)
 
-    if not ARCHIVO_MUESTRA.exists():
-        ARCHIVO_MUESTRA.write_text(json.dumps(data, indent=2, ensure_ascii=False))
-        print("Guardada muestra_api.json -- revisala para afinar extraer_sectores()")
+    timestamp = data.get("timestamp", "sin fecha")
+    actuales = extraer(data)
 
-    actuales = filtrar_target(extraer_sectores(data))
+    if not actuales:
+        print("ADVERTENCIA: no se extrajo ninguna region.")
+        print("El API pudo haber cambiado de forma. Respuesta cruda:")
+        print(json.dumps(data, indent=2)[:1500])
+        escribir_salida("hay_alerta", "false")
+        sys.exit(0)
+
     anteriores = cargar_estado()
 
-    nuevos = actuales - anteriores
-    restaurados = anteriores - actuales
+    print(f"Data de LUMA: {timestamp}")
+    print(f"{'Region':<12} {'Averia':>8} {'Planif.':>9} {'Cambio':>8}")
+    print("-" * 41)
 
-    print(f"Sectores afectados ahora: {len(actuales)}")
-    print(f"Nuevos: {len(nuevos)} | Restaurados: {len(restaurados)}")
+    isla_averia = 0
+    isla_antes = 0
+    saltos = []
 
-    guardar_estado(actuales)
+    for nombre in sorted(actuales):
+        ahora = actuales[nombre]["averia"]
+        antes = anteriores.get(nombre, {}).get("averia", ahora)
+        cambio = ahora - antes
 
-    if len(nuevos) >= UMBRAL_SECTORES_NUEVOS:
-        lineas = [f"- **{mun}** — {sec}" for mun, sec in sorted(nuevos)]
-        cuerpo = (
-            f"Se detectaron {len(nuevos)} sector(es) nuevo(s) sin servicio.\n\n"
-            + "\n".join(lineas)
-            + f"\n\nTotal de sectores afectados en tus municipios: {len(actuales)}\n\n"
-            + "Fuente: mapa de interrupciones de MiLUMA (endpoint no oficial)."
+        isla_averia += ahora
+        isla_antes += antes
+
+        signo = f"+{cambio}" if cambio > 0 else str(cambio)
+        print(
+            f"{nombre:<12} {ahora:>8} {actuales[nombre]['planificados']:>9} {signo:>8}"
         )
-        escribir_salida("hay_alerta", "true")
-        escribir_salida("titulo", f"Apagon: {len(nuevos)} sector(es) nuevo(s)")
-        escribir_salida("cuerpo", cuerpo)
-    else:
+
+        if cambio >= UMBRAL_CLIENTES_REGION:
+            saltos.append((nombre, antes, ahora, cambio))
+
+    salto_isla = isla_averia - isla_antes
+    print("-" * 41)
+    print(f"{'ISLA':<12} {isla_averia:>8} {'':>9} {salto_isla:>+8}")
+
+    guardar_estado(actuales, timestamp)
+    guardar_historico(actuales, timestamp)
+
+    evento_isla = salto_isla >= UMBRAL_CLIENTES_ISLA
+
+    if not saltos and not evento_isla:
+        print("\nSin cambios relevantes. No se alerta.")
         escribir_salida("hay_alerta", "false")
+        return
+
+    if evento_isla:
+        titulo = f"Apagon mayor: +{salto_isla:,} clientes en la isla"
+    else:
+        peor = max(saltos, key=lambda x: x[3])
+        titulo = f"Apagon en {peor[0]}: +{peor[3]:,} clientes"
+
+    lineas = [
+        f"**Data de LUMA:** {timestamp}",
+        "",
+        f"**Averia real en la isla:** {isla_averia:,} clientes "
+        f"({salto_isla:+,} desde la ultima revision)",
+        "",
+        "| Region | Averia real | Cambio | Planificados |",
+        "|---|---:|---:|---:|",
+    ]
+    for nombre in sorted(actuales):
+        ahora = actuales[nombre]["averia"]
+        antes = anteriores.get(nombre, {}).get("averia", ahora)
+        cambio = ahora - antes
+        marca = " **<-**" if any(s[0] == nombre for s in saltos) else ""
+        lineas.append(
+            f"| {nombre}{marca} | {ahora:,} | {cambio:+,} | "
+            f"{actuales[nombre]['planificados']:,} |"
+        )
+
+    lineas += [
+        "",
+        "*Averia real = clientes sin servicio menos los de mantenimiento "
+        "programado. Los planificados se excluyen a proposito: los anunciaron "
+        "con anticipacion y no son un evento.*",
+        "",
+        "Fuente: mapa de interrupciones de MiLUMA (endpoint no oficial).",
+    ]
+
+    escribir_salida("hay_alerta", "true")
+    escribir_salida("titulo", titulo)
+    escribir_salida("cuerpo", "\n".join(lineas))
+    print(f"\nALERTA: {titulo}")
 
 
 if __name__ == "__main__":
