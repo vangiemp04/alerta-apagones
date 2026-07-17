@@ -23,7 +23,9 @@ Este script solo te avisa por averias reales.
 import json
 import os
 import pathlib
+import subprocess
 import sys
+import time
 import unicodedata
 import urllib.request
 
@@ -53,6 +55,13 @@ UMBRAL_CLIENTES_REGION = 500
 
 # O si la isla completa sube de golpe (evento mayor / apagon general).
 UMBRAL_CLIENTES_ISLA = 2000
+
+# --- Modo continuo ---
+# El cron de GitHub es impuntual: */10 en la practica corre cada 20-45 min.
+# Solucion: un solo arranque por hora, y el script se queda vivo revisando.
+# 55 min para terminar antes de que el proximo cron lo relance.
+DURACION_MIN = 55
+INTERVALO_SEG = 120
 
 TIMEOUT = 30
 DIR = pathlib.Path(__file__).parent
@@ -151,63 +160,79 @@ def escribir_salida(clave, valor):
             f.write(f"{clave}={valor}\n")
 
 
-def main():
+def sh(cmd, check=False):
+    """Corre un comando. Devuelve (codigo, salida)."""
+    p = subprocess.run(cmd, cwd=str(DIR), capture_output=True, text=True)
+    if check and p.returncode:
+        print(f"  ! {' '.join(cmd)} -> {p.stderr.strip()[:200]}")
+    return p.returncode, (p.stdout + p.stderr).strip()
+
+
+def git_guardar():
+    """Commitea el estado. Reintenta rebaseando si el push choca."""
+    sh(["git", "add", "estado.json", "historico.csv"])
+    if sh(["git", "diff", "--staged", "--quiet"])[0] == 0:
+        return  # nada cambio
+    sh(["git", "commit", "-m", "Actualizar estado [skip ci]"])
+    for _ in range(3):
+        if sh(["git", "push"])[0] == 0:
+            return
+        sh(["git", "pull", "--rebase", "origin", "main"])
+        time.sleep(2)
+    print("  ! no se pudo hacer push")
+
+
+def abrir_issue(titulo, cuerpo):
+    repo = os.environ.get("GITHUB_REPOSITORY")
+    if not repo or not os.environ.get("GH_TOKEN"):
+        print(f"  [local] Issue que se abriria: {titulo}")
+        return
+    cod, out = sh(["gh", "issue", "create", "--title", titulo,
+                   "--body", cuerpo, "--repo", repo], check=True)
+    print(f"  Issue abierto: {out.splitlines()[-1] if out else 'ok'}" if not cod
+          else "  ! fallo el Issue")
+
+
+def ciclo(anteriores):
+    """Una revision. Devuelve el estado nuevo (o el anterior si fallo)."""
     try:
         data = llamar_api()
     except Exception as error:
-        print(f"Fallo la llamada al API: {error}")
-        escribir_salida("hay_alerta", "false")
-        sys.exit(0)
+        print(f"  ! fallo la llamada al API: {error}")
+        return anteriores
 
     timestamp = data.get("timestamp", "sin fecha")
     actuales = extraer(data)
 
     if not actuales:
-        print("ADVERTENCIA: no se extrajo ninguna region.")
-        print("El API pudo haber cambiado de forma. Respuesta cruda:")
-        print(json.dumps(data, indent=2)[:1500])
-        escribir_salida("hay_alerta", "false")
-        sys.exit(0)
+        print("  ! no se extrajo ninguna region -- el API pudo cambiar de forma")
+        return anteriores
 
-    anteriores = cargar_estado()
+    isla_averia = sum(d["averia"] for d in actuales.values())
+    isla_antes = sum(
+        anteriores.get(n, actuales[n])["averia"] for n in actuales
+    ) if anteriores else isla_averia
 
-    print(f"Data de LUMA: {timestamp}")
-    print(f"{'Region':<12} {'Averia':>8} {'Planif.':>9} {'Cambio':>8}")
-    print("-" * 41)
-
-    isla_averia = 0
-    isla_antes = 0
     saltos = []
-
     for nombre in sorted(actuales):
         ahora = actuales[nombre]["averia"]
-        antes = anteriores.get(nombre, {}).get("averia", ahora)
-        cambio = ahora - antes
-
-        isla_averia += ahora
-        isla_antes += antes
-
-        signo = f"+{cambio}" if cambio > 0 else str(cambio)
-        print(
-            f"{nombre:<12} {ahora:>8} {actuales[nombre]['planificados']:>9} {signo:>8}"
-        )
-
-        if cambio >= UMBRAL_CLIENTES_REGION:
-            saltos.append((nombre, antes, ahora, cambio))
+        antes = anteriores.get(nombre, {}).get("averia", ahora) if anteriores else ahora
+        if ahora - antes >= UMBRAL_CLIENTES_REGION:
+            saltos.append((nombre, antes, ahora, ahora - antes))
 
     salto_isla = isla_averia - isla_antes
-    print("-" * 41)
-    print(f"{'ISLA':<12} {isla_averia:>8} {'':>9} {salto_isla:>+8}")
+    detalle = "  ".join(
+        f"{n[:3]}={actuales[n]['averia']}" for n in sorted(actuales)
+    )
+    print(f"  {timestamp}  isla={isla_averia:<5} ({salto_isla:+})  {detalle}")
 
     guardar_estado(actuales, timestamp)
     guardar_historico(actuales, timestamp)
+    git_guardar()
 
     evento_isla = salto_isla >= UMBRAL_CLIENTES_ISLA
-
     if not saltos and not evento_isla:
-        print("\nSin cambios relevantes. No se alerta.")
-        escribir_salida("hay_alerta", "false")
-        return
+        return actuales
 
     if evento_isla:
         titulo = f"Apagon mayor: +{salto_isla:,} clientes en la isla"
@@ -219,34 +244,58 @@ def main():
         f"**Data de LUMA:** {timestamp}",
         "",
         f"**Averia real en la isla:** {isla_averia:,} clientes "
-        f"({salto_isla:+,} desde la ultima revision)",
+        f"({salto_isla:+,} desde la revision anterior)",
         "",
         "| Region | Averia real | Cambio | Planificados |",
         "|---|---:|---:|---:|",
     ]
     for nombre in sorted(actuales):
         ahora = actuales[nombre]["averia"]
-        antes = anteriores.get(nombre, {}).get("averia", ahora)
-        cambio = ahora - antes
+        antes = anteriores.get(nombre, {}).get("averia", ahora) if anteriores else ahora
         marca = " **<-**" if any(s[0] == nombre for s in saltos) else ""
         lineas.append(
-            f"| {nombre}{marca} | {ahora:,} | {cambio:+,} | "
+            f"| {nombre}{marca} | {ahora:,} | {ahora - antes:+,} | "
             f"{actuales[nombre]['planificados']:,} |"
         )
-
     lineas += [
         "",
-        "*Averia real = clientes sin servicio menos los de mantenimiento "
-        "programado. Los planificados se excluyen a proposito: los anunciaron "
-        "con anticipacion y no son un evento.*",
+        "*Averia real = clientes sin servicio menos mantenimiento programado.*",
         "",
         "Fuente: mapa de interrupciones de MiLUMA (endpoint no oficial).",
     ]
 
-    escribir_salida("hay_alerta", "true")
-    escribir_salida("titulo", titulo)
-    escribir_salida("cuerpo", "\n".join(lineas))
-    print(f"\nALERTA: {titulo}")
+    print(f"  >> ALERTA: {titulo}")
+    abrir_issue(titulo, "\n".join(lineas))
+    return actuales
+
+
+def main():
+    # Una sola pasada:  python monitor.py --once
+    una_vez = "--once" in sys.argv
+
+    sh(["git", "config", "user.name", "monitor-bot"])
+    sh(["git", "config", "user.email", "monitor-bot@users.noreply.github.com"])
+
+    estado = cargar_estado()
+    if una_vez:
+        ciclo(estado)
+        return
+
+    fin = time.time() + DURACION_MIN * 60
+    n = 0
+    print(f"Modo continuo: revisando cada {INTERVALO_SEG}s por {DURACION_MIN} min")
+    print("-" * 60)
+
+    while time.time() < fin:
+        n += 1
+        print(f"[{n:>2}]", end="")
+        estado = ciclo(estado)
+        if time.time() + INTERVALO_SEG >= fin:
+            break
+        time.sleep(INTERVALO_SEG)
+
+    print("-" * 60)
+    print(f"Fin. {n} revisiones. El proximo cron relanza en la hora.")
 
 
 if __name__ == "__main__":
