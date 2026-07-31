@@ -1,5 +1,5 @@
 {
-  "timestamp": "07/31/2026 08:15 AM",
+  "timestamp": "07/31/2026 08:20 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 297,
@@ -12,14 +12,14 @@
       "total": 654
     },
     "CAROLINA": {
-      "averia": 89,
+      "averia": 88,
       "planificados": 159,
-      "total": 248
+      "total": 247
     },
     "CAGUAS": {
-      "averia": 2234,
+      "averia": 24,
       "planificados": 0,
-      "total": 2234
+      "total": 24
     },
     "MAYAGUEZ": {
       "averia": 72,
