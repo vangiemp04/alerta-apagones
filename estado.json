@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/04/2026 05:55 PM",
+  "timestamp": "08/04/2026 06:00 PM",
   "regiones": {
     "ARECIBO": {
       "averia": 901,
@@ -7,9 +7,9 @@
       "total": 971
     },
     "BAYAMON": {
-      "averia": 455,
+      "averia": 454,
       "planificados": 328,
-      "total": 783
+      "total": 782
     },
     "CAROLINA": {
       "averia": 1721,
@@ -17,9 +17,9 @@
       "total": 1735
     },
     "CAGUAS": {
-      "averia": 530,
+      "averia": 531,
       "planificados": 0,
-      "total": 530
+      "total": 531
     },
     "MAYAGUEZ": {
       "averia": 451,
