@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/04/2026 11:20 PM",
+  "timestamp": "08/04/2026 11:25 PM",
   "regiones": {
     "ARECIBO": {
       "averia": 24,
@@ -22,9 +22,9 @@
       "total": 1128
     },
     "MAYAGUEZ": {
-      "averia": 103,
+      "averia": 43,
       "planificados": 0,
-      "total": 103
+      "total": 43
     },
     "PONCE": {
       "averia": 51,
@@ -32,9 +32,9 @@
       "total": 51
     },
     "SAN JUAN": {
-      "averia": 168,
+      "averia": 261,
       "planificados": 0,
-      "total": 168
+      "total": 261
     }
   }
 }
