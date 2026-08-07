@@ -27,14 +27,14 @@
       "total": 257
     },
     "PONCE": {
-      "averia": 716,
+      "averia": 280,
       "planificados": 7987,
-      "total": 8703
+      "total": 8267
     },
     "SAN JUAN": {
-      "averia": 194,
+      "averia": 202,
       "planificados": 3280,
-      "total": 3474
+      "total": 3482
     }
   }
 }
