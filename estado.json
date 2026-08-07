@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/07/2026 07:45 PM",
+  "timestamp": "08/07/2026 07:50 PM",
   "regiones": {
     "ARECIBO": {
       "averia": 27,
@@ -27,14 +27,14 @@
       "total": 347
     },
     "PONCE": {
-      "averia": 751,
+      "averia": 752,
       "planificados": 0,
-      "total": 751
+      "total": 752
     },
     "SAN JUAN": {
-      "averia": 371,
+      "averia": 370,
       "planificados": 1425,
-      "total": 1796
+      "total": 1795
     }
   }
 }
