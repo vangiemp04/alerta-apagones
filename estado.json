@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/17/2026 05:00 AM",
+  "timestamp": "08/17/2026 05:05 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 215,
@@ -7,19 +7,19 @@
       "total": 215
     },
     "BAYAMON": {
-      "averia": 23,
+      "averia": 24,
       "planificados": 0,
-      "total": 23
+      "total": 24
     },
     "CAROLINA": {
-      "averia": 29,
+      "averia": 30,
       "planificados": 0,
-      "total": 29
+      "total": 30
     },
     "CAGUAS": {
-      "averia": 226,
+      "averia": 227,
       "planificados": 0,
-      "total": 226
+      "total": 227
     },
     "MAYAGUEZ": {
       "averia": 2013,
@@ -27,9 +27,9 @@
       "total": 2013
     },
     "PONCE": {
-      "averia": 2439,
+      "averia": 2441,
       "planificados": 0,
-      "total": 2439
+      "total": 2441
     },
     "SAN JUAN": {
       "averia": 3,
