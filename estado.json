@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/21/2026 08:10 AM",
+  "timestamp": "08/21/2026 08:15 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 190,
@@ -7,9 +7,9 @@
       "total": 190
     },
     "BAYAMON": {
-      "averia": 64,
+      "averia": 65,
       "planificados": 0,
-      "total": 64
+      "total": 65
     },
     "CAROLINA": {
       "averia": 31,
@@ -22,9 +22,9 @@
       "total": 50
     },
     "MAYAGUEZ": {
-      "averia": 446,
+      "averia": 297,
       "planificados": 0,
-      "total": 446
+      "total": 297
     },
     "PONCE": {
       "averia": 35,
