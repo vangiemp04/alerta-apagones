@@ -1,5 +1,5 @@
 {
-  "timestamp": "08/24/2026 05:20 AM",
+  "timestamp": "08/24/2026 05:25 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 258,
@@ -22,9 +22,9 @@
       "total": 3567
     },
     "MAYAGUEZ": {
-      "averia": 63,
+      "averia": 142,
       "planificados": 0,
-      "total": 63
+      "total": 142
     },
     "PONCE": {
       "averia": 64,
