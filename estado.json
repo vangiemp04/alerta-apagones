@@ -1,5 +1,5 @@
 {
-  "timestamp": "09/03/2026 01:00 AM",
+  "timestamp": "09/03/2026 01:05 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 22,
@@ -17,9 +17,9 @@
       "total": 25
     },
     "CAGUAS": {
-      "averia": 713,
+      "averia": 714,
       "planificados": 0,
-      "total": 713
+      "total": 714
     },
     "MAYAGUEZ": {
       "averia": 260,
