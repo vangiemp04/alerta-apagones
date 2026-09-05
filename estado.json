@@ -1,5 +1,5 @@
 {
-  "timestamp": "09/05/2026 01:00 AM",
+  "timestamp": "09/05/2026 01:05 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 12,
@@ -7,9 +7,9 @@
       "total": 12
     },
     "BAYAMON": {
-      "averia": 83,
+      "averia": 84,
       "planificados": 0,
-      "total": 83
+      "total": 84
     },
     "CAROLINA": {
       "averia": 26,
@@ -32,9 +32,9 @@
       "total": 6
     },
     "SAN JUAN": {
-      "averia": 19,
+      "averia": 18,
       "planificados": 0,
-      "total": 19
+      "total": 18
     }
   }
 }
