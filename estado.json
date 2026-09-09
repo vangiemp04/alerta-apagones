@@ -1,14 +1,14 @@
 {
-  "timestamp": "09/09/2026 02:40 PM",
+  "timestamp": "09/09/2026 02:45 PM",
   "regiones": {
     "ARECIBO": {
-      "averia": 97,
+      "averia": 104,
       "planificados": 269,
-      "total": 366
+      "total": 373
     },
     "BAYAMON": {
-      "averia": 427,
-      "planificados": 5603,
+      "averia": 426,
+      "planificados": 5604,
       "total": 6030
     },
     "CAROLINA": {
@@ -22,9 +22,9 @@
       "total": 550
     },
     "MAYAGUEZ": {
-      "averia": 1291,
+      "averia": 1290,
       "planificados": 109,
-      "total": 1400
+      "total": 1399
     },
     "PONCE": {
       "averia": 4143,
