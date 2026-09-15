@@ -7,9 +7,9 @@
       "total": 2002
     },
     "BAYAMON": {
-      "averia": 297,
+      "averia": 289,
       "planificados": 2598,
-      "total": 2895
+      "total": 2887
     },
     "CAROLINA": {
       "averia": 90,
@@ -17,9 +17,9 @@
       "total": 90
     },
     "CAGUAS": {
-      "averia": 745,
+      "averia": 789,
       "planificados": 978,
-      "total": 1723
+      "total": 1767
     },
     "MAYAGUEZ": {
       "averia": 425,
@@ -27,14 +27,14 @@
       "total": 1605
     },
     "PONCE": {
-      "averia": 30,
+      "averia": 58,
       "planificados": 3608,
-      "total": 3638
+      "total": 3666
     },
     "SAN JUAN": {
-      "averia": 16,
+      "averia": 17,
       "planificados": 146,
-      "total": 162
+      "total": 163
     }
   }
 }
