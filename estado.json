@@ -1,20 +1,20 @@
 {
-  "timestamp": "09/25/2026 09:40 AM",
+  "timestamp": "09/25/2026 09:45 AM",
   "regiones": {
     "ARECIBO": {
-      "averia": 167,
+      "averia": 168,
       "planificados": 46,
-      "total": 213
+      "total": 214
     },
     "BAYAMON": {
-      "averia": 122,
+      "averia": 121,
       "planificados": 0,
-      "total": 122
+      "total": 121
     },
     "CAROLINA": {
-      "averia": 386,
+      "averia": 388,
       "planificados": 0,
-      "total": 386
+      "total": 388
     },
     "CAGUAS": {
       "averia": 476,
