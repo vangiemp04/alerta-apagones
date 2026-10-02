@@ -1,5 +1,5 @@
 {
-  "timestamp": "10/02/2026 02:10 AM",
+  "timestamp": "10/02/2026 02:15 AM",
   "regiones": {
     "ARECIBO": {
       "averia": 1187,
@@ -32,9 +32,9 @@
       "total": 16
     },
     "SAN JUAN": {
-      "averia": 781,
+      "averia": 782,
       "planificados": 0,
-      "total": 781
+      "total": 782
     }
   }
 }
