@@ -1,40 +1,40 @@
 {
-  "timestamp": "10/31/2026 09:50 PM",
+  "timestamp": "11/01/2026 03:20 AM",
   "regiones": {
     "ARECIBO": {
-      "averia": 2738,
+      "averia": 2285,
       "planificados": 0,
-      "total": 2738
+      "total": 2285
     },
     "BAYAMON": {
-      "averia": 1,
+      "averia": 0,
       "planificados": 0,
-      "total": 1
+      "total": 0
     },
     "CAROLINA": {
-      "averia": 1,
+      "averia": 17,
       "planificados": 0,
-      "total": 1
+      "total": 17
     },
     "CAGUAS": {
-      "averia": 330,
+      "averia": 23,
       "planificados": 0,
-      "total": 330
+      "total": 23
     },
     "MAYAGUEZ": {
-      "averia": 2403,
+      "averia": 426,
       "planificados": 0,
-      "total": 2403
+      "total": 426
     },
     "PONCE": {
-      "averia": 127,
+      "averia": 99,
       "planificados": 0,
-      "total": 127
+      "total": 99
     },
     "SAN JUAN": {
-      "averia": 8,
-      "planificados": 22,
-      "total": 30
+      "averia": 95,
+      "planificados": 0,
+      "total": 95
     }
   }
 }
