@@ -7,14 +7,14 @@
       "total": 142
     },
     "BAYAMON": {
-      "averia": 16,
+      "averia": 17,
       "planificados": 0,
-      "total": 16
+      "total": 17
     },
     "CAROLINA": {
-      "averia": 21,
+      "averia": 11,
       "planificados": 0,
-      "total": 21
+      "total": 11
     },
     "CAGUAS": {
       "averia": 329,
@@ -22,9 +22,9 @@
       "total": 329
     },
     "MAYAGUEZ": {
-      "averia": 298,
+      "averia": 287,
       "planificados": 0,
-      "total": 298
+      "total": 287
     },
     "PONCE": {
       "averia": 73,
