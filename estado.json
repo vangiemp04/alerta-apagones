@@ -17,14 +17,14 @@
       "total": 19
     },
     "CAGUAS": {
-      "averia": 571,
+      "averia": 572,
       "planificados": 0,
-      "total": 571
+      "total": 572
     },
     "MAYAGUEZ": {
-      "averia": 291,
+      "averia": 262,
       "planificados": 0,
-      "total": 291
+      "total": 262
     },
     "PONCE": {
       "averia": 22,
@@ -32,9 +32,9 @@
       "total": 22
     },
     "SAN JUAN": {
-      "averia": 138,
+      "averia": 133,
       "planificados": 370,
-      "total": 508
+      "total": 503
     }
   }
 }
