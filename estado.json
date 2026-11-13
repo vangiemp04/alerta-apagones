@@ -1,10 +1,10 @@
 {
-  "timestamp": "11/12/2026 08:30 PM",
+  "timestamp": "11/12/2026 08:35 PM",
   "regiones": {
     "ARECIBO": {
-      "averia": 6,
+      "averia": 5,
       "planificados": 0,
-      "total": 6
+      "total": 5
     },
     "BAYAMON": {
       "averia": 409,
